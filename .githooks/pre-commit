@@ -1,0 +1,52 @@
+#!/bin/sh
+# Pre-commit guard for AppWorks-owned artefacts.
+#
+# Activates only when git is configured to use this hooks directory:
+#   git config core.hooksPath .githooks
+#
+# Rejects commits that touch any *.cws, .identifiers, or *Base.java file
+# UNLESS the committer's email matches the configured AppWorks sync identity.
+
+set -e
+
+# Sync identity: settable via env var (CI/local override) or git config.
+# Falls back to a placeholder that no real developer should ever match,
+# guaranteeing the hook fires for human/agent commits by default.
+SYNC_EMAIL="${APPWORKS_SYNC_EMAIL:-$(git config --get appworks.syncEmail || echo "appworks-sync@example.com")}"
+AUTHOR_EMAIL=$(git config user.email || echo "")
+
+# If the committer IS the sync identity, allow everything — PA is doing its job.
+if [ "$AUTHOR_EMAIL" = "$SYNC_EMAIL" ]; then
+  exit 0
+fi
+
+# Protected patterns (regex, NOT glob — git diff outputs paths)
+PROTECTED='\.cws$|/\.identifiers$|^\.identifiers$|Base\.java$|#cws-ma#\.cws/|#ef#/'
+
+# examples/ is sanitized reference material that ships with this template.
+# Filter it out before applying PROTECTED.
+STAGED=$(git diff --cached --name-only --diff-filter=ACMRD | grep -v '^examples/' || true)
+VIOLATIONS=$(echo "$STAGED" | grep -E "$PROTECTED" || true)
+
+if [ -n "$VIOLATIONS" ]; then
+  echo ""
+  echo "ERROR: pre-commit hook rejected this commit."
+  echo ""
+  echo "The following files are AppWorks-owned and may only be modified by the"
+  echo "AppWorks sync identity ($SYNC_EMAIL)."
+  echo "Your git identity ($AUTHOR_EMAIL) is not authorised to commit them."
+  echo ""
+  echo "Files that triggered the rejection:"
+  echo "$VIOLATIONS" | sed 's/^/  - /'
+  echo ""
+  echo "What to do:"
+  echo "  - If this is a model change, make it in the AppWorks Web IDE instead."
+  echo "  - If you staged these by accident, run:"
+  echo "      git reset HEAD -- <file>"
+  echo "  - If you are AppWorks PA committing programmatically, set:"
+  echo "      git config user.email \"$SYNC_EMAIL\""
+  echo ""
+  exit 1
+fi
+
+exit 0

@@ -1,0 +1,79 @@
+name: Guard AppWorks Native Artefacts
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  guard:
+    name: Reject native-artefact edits from non-sync identities
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Identify changed files
+        id: diff
+        run: |
+          set -e
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="origin/${{ github.base_ref }}"
+            git fetch origin "${{ github.base_ref }}" --depth=1
+            CHANGED=$(git diff --name-only "$BASE...HEAD")
+            AUTHOR_EMAIL=$(git log -1 --format='%ae' HEAD)
+          else
+            CHANGED=$(git diff --name-only HEAD~1 HEAD)
+            AUTHOR_EMAIL=$(git log -1 --format='%ae' HEAD)
+          fi
+          echo "Author: $AUTHOR_EMAIL"
+          echo "Changed files:"
+          echo "$CHANGED" | sed 's/^/  /'
+          {
+            echo "author_email=$AUTHOR_EMAIL"
+            echo "changed<<EOF"
+            echo "$CHANGED"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Check protected paths
+        env:
+          SYNC_EMAIL: ${{ vars.APPWORKS_SYNC_EMAIL }}
+        run: |
+          set -e
+          if [ -z "$SYNC_EMAIL" ]; then
+            echo "::warning::APPWORKS_SYNC_EMAIL repo variable is not set."
+            echo "::warning::Configure it under Settings → Secrets and variables → Variables."
+            echo "::warning::Using a safe default that will reject ALL .cws commits until configured."
+            SYNC_EMAIL="appworks-sync@example.com"
+          fi
+
+          AUTHOR='${{ steps.diff.outputs.author_email }}'
+          PROTECTED='\.cws$|/\.identifiers$|^\.identifiers$|Base\.java$|#cws-ma#\.cws/|#ef#/'
+
+          # examples/ ships sanitized reference fragments that mirror real PA file
+          # patterns on purpose — they are not live model files. Filter them out
+          # before applying the protected regex.
+          FILTERED=$(echo '${{ steps.diff.outputs.changed }}' | grep -v '^examples/' || true)
+          VIOLATIONS=$(echo "$FILTERED" | grep -E "$PROTECTED" || true)
+
+          if [ -z "$VIOLATIONS" ]; then
+            echo "OK: no protected paths modified."
+            exit 0
+          fi
+
+          if [ "$AUTHOR" = "$SYNC_EMAIL" ]; then
+            echo "OK: protected paths modified by the AppWorks sync identity ($SYNC_EMAIL)."
+            echo "$VIOLATIONS" | sed 's/^/  /'
+            exit 0
+          fi
+
+          echo "::error::Protected AppWorks files modified by non-sync identity '$AUTHOR'."
+          echo "::error::Only the AppWorks sync identity ($SYNC_EMAIL) may commit these files."
+          echo "Violations:"
+          echo "$VIOLATIONS" | sed 's/^/  - /'
+          exit 1
