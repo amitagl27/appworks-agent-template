@@ -16,7 +16,7 @@ Every file or folder PA writes follows a `#suffix#` naming convention. This is t
 | `#cws-trt#.cws`     | TRanslation Text (text for one identifier × one locale) | XML |
 | `.identifiers`      | Filename → internal GUID map written by PA in every owned folder | properties |
 
-## Traditional pattern (CSMS-style)
+## Traditional pattern (XForms,Java heavy development-style)
 
 These appear in projects organised by artefact type — `BPM/`, `JS/`, `Webservices/`, `DB Metadata/`, etc.
 
