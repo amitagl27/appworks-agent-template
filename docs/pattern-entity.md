@@ -78,7 +78,7 @@ The sibling repo is a regular code repo — TypeScript, Go, Java, whatever your 
 
 | From PA repo → sibling | From sibling → PA |
 |---|---|
-| Entity events (case created, status changed, deadline missed) via PA's REST/webhook adapters | REST calls to the sibling for business rule evaluation, document generation, external lookups |
+| Entity events (case created, status changed, deadline missed) via rules -> BPM Calls to the sibling for business rule evaluation, document generation, external lookups |
 | BPM process activities that call out to external services | Activity completion callbacks back to PA |
 
 ## Where agents *can* contribute inside this repo (limited)
@@ -96,7 +96,7 @@ See [`examples/entity/`](../examples/entity/) for a sanitized `CaseRecord#ef#/` 
 
 ## Common foot-guns specific to this pattern
 
-1. **The temptation to add Java alongside the entity.** Some developers, frustrated by the lack of an implementation layer, try to drop Java classes inside the entity folders. PA does not pick them up — they're either ignored or actively cleaned up on the next sync. Use a sibling repo.
+1. **The temptation to add Java alongside the entity.** Do not add java heavy development in the same project where you are building your entites. Always create a separate project for all java related custom logics.
 
 2. **The `bb/` folder is not a "bundle" you can edit.** It's PA's serialization layout — short for "behavior bundle". Treat it as part of the entity folder (`#ef#`) and off-limits.
 
