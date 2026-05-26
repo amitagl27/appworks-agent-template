@@ -31,7 +31,11 @@ git config core.hooksPath .githooks
 # 4. Set the AppWorks sync identity for CI (your repo settings → Variables)
 #    APPWORKS_SYNC_EMAIL = the email PA commits under
 
-# 5. Connect your AppWorks PA workspace to this repo
+# 5. Drop the AppWorks Javadocs at docs/api-reference/
+#    (download from OpenText My Support; folder is gitignored — OT copyright)
+#    Without this, AI agents WILL hallucinate AppWorks API signatures.
+
+# 6. Connect your AppWorks PA workspace to this repo
 #    See: docs/connecting-pa.md
 ```
 

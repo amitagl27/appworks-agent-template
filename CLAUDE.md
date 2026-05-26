@@ -93,6 +93,39 @@ If this is an entity-pattern project, your agent work belongs in that sibling re
 | `.github/workflows/**` | CI |
 | `examples/**` | Reference material |
 
+## AppWorks API reference — READ THIS BEFORE WRITING ANY JAVA
+
+Your training data does not cover OpenText AppWorks / Cordys APIs in any depth. Classes like `com.cordys.cpc.bsf.busobject.CustomBusObject`, `com.eibus.xml.nom.Node`, `com.eibus.connector.nom.Connector`, and the entire `com.eibus.util.*` family are *not* on the open internet at meaningful volume. If you write Java that uses these APIs from memory, you **will hallucinate method names, parameter orders, and return types**. The code will compile against the wrong signatures and fail at runtime — or worse, silently behave incorrectly in production.
+
+**Mandatory step before writing any Java that imports `com.cordys.*` or `com.eibus.*`:**
+
+1. Check that `docs/api-reference/` exists in the working directory. It contains the official AppWorks Platform Javadocs (HTML) and is gitignored — each developer downloads it from OpenText My Support into that location.
+2. If `docs/api-reference/` is missing or empty, **stop and tell the user** to download the Javadocs and unzip them there. Do not proceed with guesswork.
+3. Locate the class you need:
+   - `docs/api-reference/allclasses-index.html` lists every class.
+   - `docs/api-reference/index-all.html` is the A–Z method index — often faster.
+   - Package directories under `docs/api-reference/com/eibus/...` and `docs/api-reference/com/cordys/...` contain per-class pages.
+4. Read the class's HTML page (or grep it) to confirm: exact method signature, parameter types, return type, what it throws, and the javadoc comment. Treat the HTML as authoritative — your prior beliefs about the API are not.
+
+### When to consult the Javadocs
+
+Any time you find yourself importing or calling:
+
+- `com.cordys.cpc.bsf.busobject.*` (CustomBusObject, BusObject, BusObjectIterator, BusObjectConfig)
+- `com.eibus.connector.nom.*` (Connector, SOAP method construction)
+- `com.eibus.xml.nom.*` (Node — XML DOM in NOM, very different from W3C DOM)
+- `com.eibus.xml.xpath.*` (XPath helpers — different signatures than javax.xml.xpath)
+- `com.cordys.cpc.bsf.query.*` (Cursor, Query)
+- Anything in `com.cordys.cap.*`, `com.cordys.mdm.*`, `com.cordys.translation.*`
+
+### Heuristic for spotting risk
+
+If the import line starts with `com.cordys.` or `com.eibus.`, assume your prior knowledge is wrong until you've read the actual Javadoc. The cost of one extra Grep against `docs/api-reference/` is dramatically lower than the cost of a method that doesn't exist.
+
+### What this protects against
+
+A real failure mode I want you to avoid: writing `Node.getElementValue(node, "childName")` because that *sounds* like a reasonable method, when the actual call is `Node.getDataWithDefault(node, ...)` or you need to walk children explicitly via `Node.getFirstChild()`. The wrong call compiles fine. It returns null. The defect is found in QA two weeks later. Don't be the cause of that.
+
 ## The generated/user-extendable Java pattern in detail
 
 When you see a pair like this, here is what each file is for:

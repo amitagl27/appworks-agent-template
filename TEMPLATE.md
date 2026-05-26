@@ -60,7 +60,17 @@ PA needs a Personal Access Token to push:
 - Permissions: **Contents: Read & Write**, **Metadata: Read**
 - Expiration: 90 days (rotate before expiry)
 
-### 5. Connect AppWorks PA workspace
+### 5. Drop the AppWorks Platform Javadocs at `docs/api-reference/`
+
+**This is the difference between an AI agent that writes correct AppWorks Java and one that writes plausible-looking nonsense.** AppWorks's `com.cordys.*` and `com.eibus.*` APIs (CustomBusObject, Node, Connector, XPath helpers, etc.) are not represented in any modern LLM's training data at meaningful volume. Without an on-disk reference, the agent will guess at method names and parameter orders, and the resulting code will compile but fail at runtime.
+
+- Download the Javadocs for your AppWorks Platform version from **OpenText My Support** (search "AppWorks Platform Javadocs" — they ship as a ZIP).
+- Unzip the contents into `docs/api-reference/` so that `docs/api-reference/index.html` and `docs/api-reference/allclasses-index.html` exist.
+- The folder is gitignored (OT copyright forbids redistribution) — every developer on the team does this once per machine.
+
+The `CLAUDE.md` file in this template instructs the agent to consult `docs/api-reference/` before writing any Java that imports `com.cordys.*` or `com.eibus.*`. If the folder is missing, the agent is instructed to stop and ask the user to install the Javadocs rather than guess.
+
+### 6. Connect AppWorks PA workspace
 
 In your PA workspace SCM config:
 
@@ -74,7 +84,7 @@ In your PA workspace SCM config:
 
 Click **Test Connection**. It should pass. If you see `Error: Not Found` with an `isLFSEnabled` stack frame, you skipped the LFS activation in step 1 of [`docs/connecting-pa.md`](docs/connecting-pa.md) — go back and run those three commands first.
 
-### 6. Verify the guardrails work
+### 7. Verify the guardrails work
 
 Try (as a sanity check):
 
